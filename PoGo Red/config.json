@@ -1,0 +1,13 @@
+{
+  "accounts": [
+    {
+      "username": "",
+      "password": "",
+      "locations": [
+        {"latitude":34.0100837, "longitude":-118.4959304}
+      ],
+      "desired_pokemon": [],
+      "auth_service": "google"
+    }
+  ]
+}

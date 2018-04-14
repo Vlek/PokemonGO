@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PoGo Red</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    /* TODO List:
+
+    - Create a night time pokemon go google map style and have it set itself at the right time
+        - Give players the option of choosing or letting it use the one for the current time.
+    - Create a barebones version that has all the functionality with little to no bells and whistles
+        - Remove any fading/resizing graphics
+            - Player reticle
+                - Replace with a standard circle or a dot indicating player location
+        - Remove everything possible
+            - Hide every named thing on google maps (poi, roadnames, etc)
+    - Create an event where, if the player clicks the map, it does a single reticle circle expanding
+
+     */
+    var pokemon_name_list = ['Missingno', 'Bulbasaur', 'Ivysaur', 'Charmander', 'Charmeleon', 'Charizard', 'Squirtle',
+                             'Wartortle', 'Blastoise', 'Caterpie', 'Metapod', 'Butterfree', 'Weedle', 'Kakuna', 'Beedrill',
+                             'Pidgey', 'Pidgeotto', 'Pidgeot', 'Rattata', 'Raticate', 'Spearow', 'Fearow', 'Ekans', 'Arbok',
+                             'Pikachu', 'Raichu', 'Sandshrew', 'Sandslash', 'Nidoran', 'Nidorina', 'Nidoqueen', 'Nidoran',
+                             'Nidorino', 'Nidoking', 'Clefairy', 'Clefable', 'Vulpix', 'Ninetales', 'Jigglypuff', 'Wigglytuff',
+                             'Zubat', 'Golbat', 'Oddish', 'Gloom', 'Vileplume', 'Paras', 'Parasect', 'Venonat', 'Venomoth',
+                             'Diglett', 'Dugtrio', 'Meowth', 'Persian', 'Psyduck', 'Golduck', 'Mankey', 'Primeape', 'Growlithe',
+                             'Arcanine', 'Poliwag', 'Poliwhirl', 'Poliwrath', 'Abra', 'Kadabra', 'Alakazam', 'Machop', 'Machoke',
+                             'Machamp', 'Bellsrpout', 'Weepinbell', 'Victreebel', 'Tentacool', 'Tentacruel', 'Geodude', 'Graveler',
+                             'Golem', 'Ponyta', 'Rapidash', 'Slowpoke', 'Slowbro', 'Magnemite', 'Magneton', "Farfetch'd", 'Doduo',
+                             'Dodrio', 'Seel', 'Dewgong', 'Grimer', 'Muk', 'Shellder', 'Cloyster', 'Gastly', 'Haunter', 'Gengar',
+                             'Onix', 'Drowzee', 'Hypno', 'Krabby', 'Kingler', 'Voltorb', 'Electrode', 'Exeggcute', 'Exeggutor',
+                             'Cubone', 'Marowak', 'Hitmonlee', 'Hitmonchan', 'Lickitung', 'Koffing', 'Weezing', 'Rhyhorn', 'Rhydon',
+                             'Chansey', 'Tangela', 'Kangashkan', 'Horsea', 'Seadra', 'Goldeen', 'Seaking', 'Staryu', 'Starmie',
+                             'Mr. Mine', 'Scyther', 'Jynx', 'Electabuzz', 'Magmar', 'Pinsir', 'Tauros', 'Magikarp', 'Gyarados',
+                             'Lapras', 'Ditto', 'Eevee', 'Vaporeon', 'Jolteon', 'Flareon', 'Porygon', 'Omanyte', 'Omastar',
+                             'Kabuto', 'Kabutops', 'Aerodactyl', 'Snorlax', 'Articuno', 'Zapdos', 'Moltres', 'Dratini', 'Dragonair',
+                             'Dragonite', 'Mewtwo', 'Mew'];
+
+    function initMap() {
+        var player = {};
+        player.location = {lat: 34.0074288, lng: -118.4994885};
+
+        var pokemap = {pokestops: [], gyms: [], pokemon:[]};
+        var pokemon_go_night = new google.maps.StyledMapType(
+                [
+                    {
+                        "featureType": "landscape.man_made",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#44A3B4"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape.natural.landcover",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#60889C"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape.natural.terrain",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#4E8587"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.attraction",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "visibility": "on"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.business",
+                        "stylers": [
+                            {
+                                "color": "#41A2B2"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "transit",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.business",
+                        "elementType": "labels.icon",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.park",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#035B87"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#2C538B"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "geometry.stroke",
+                        "stylers": [
+                            {
+                                "color": "#2C538B"
+                            },
+                            {
+                                "weight": "1.25"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "labels.icon",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#184CAA"
+                            }
+                        ]
+                    }
+                ],
+                {name: 'Pokemon Go (Night)'});
+
+        var pokemon_go = new google.maps.StyledMapType(
+                [
+                    {
+                        "featureType": "landscape.man_made",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#a1f199"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape.natural.landcover",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#37bda2"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape.natural.terrain",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#37bda2"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.attraction",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "visibility": "on"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.business",
+                        "stylers": [
+                            {
+                                "color": "#e4dfd9"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "transit",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.business",
+                        "elementType": "labels.icon",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi.park",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#37bda2"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#84b09e"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "geometry.stroke",
+                        "stylers": [
+                            {
+                                "color": "#fafeb8"
+                            },
+                            {
+                                "weight": "1.25"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "labels.icon",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#5ddad6"
+                            }
+                        ]
+                    }
+                ],
+                {name: 'Pokemon Go'});
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+            center: player.location,
+            zoom: 17,
+            mapTypeControl: false,
+            //mapTypeControlOptions: {
+            //    mapTypeIds: ['pokemon_go', 'pokemon_go_night']
+            //},
+            streetViewControl: false
+
+        });
+
+        map.mapTypes.set('pokemon_go', pokemon_go);
+        map.mapTypes.set('pokemon_go_night', pokemon_go_night);
+        map.setMapTypeId('pokemon_go');
+
+        function map_switcher(tick){
+            tick = tick || 0;
+            if (tick == 0){
+                map.setMapTypeId('pokemon_go');
+                tick = 1
+            } else {
+                map.setMapTypeId('pokemon_go_night');
+                tick = 0
+            }
+            setTimeout(function(){map_switcher(tick)}, 10000);
+        }
+
+        // setTimeout(map_switcher, 10000);
+
+        var contextMenu = google.maps.event.addListener(
+                map,
+                "rightclick",
+                function( event ) {
+                    // use JS Dom methods to create the menu
+                    // use event.pixel.x and event.pixel.y
+                    // to position menu at mouse position
+                    console.log( event );
+                }
+        );
+
+        var player_reticle = new google.maps.Circle({
+            strokeColor: '#CCCCCC',
+            strokeOpacity: 0.6,
+            strokeWeight: 2,
+            fillOpacity: 0,
+            map: map,
+            center: player.location,
+            radius: 0
+        });
+        var player_bright_reticle = new google.maps.Circle({
+            strokeColor: '#FFFFFF',
+            strokeOpacity: 0.0,
+            strokeWeight: 2,
+            fillOpacity: 0,
+            map: map,
+            center: player.location,
+            radius: 50
+        });
+
+        function update_reticle(){
+            player_reticle.setCenter(player.location);
+            player_bright_reticle.setCenter(player.location);
+        }
+
+        // TODO: Figure out how to handle the second or so the reticle doesn't show
+        setInterval(function(){
+            var new_reticle_size = player_reticle.radius += 1;
+            if (player_reticle.radius > 70) {
+                new_reticle_size = 0;
+                player_bright_reticle.setOptions({
+                    'strokeOpacity': 0.0
+                });
+                player_reticle.setOptions({
+                    'strokeOpacity': 0.6
+                });
+            } else if (player_reticle.radius > 49){
+                if (player_bright_reticle.strokeOpacity != 0.6){
+                    player_bright_reticle.setOptions({
+                        'strokeOpacity': 0.6
+                    });
+                }
+                player_reticle.setOptions({
+                    'strokeOpacity': 0.05 * (70 - player_reticle.radius)
+                });
+            }
+            player_reticle.setOptions({
+                'radius': new_reticle_size
+            });
+        }, 50);
+
+        var connection = null;
+
+        function jsend(msg, msgtag){
+            var obj = {};
+            obj[msgtag] = msg;
+            return JSON.stringify(obj, null, '');
+        }
+
+        window.onload = function() {
+            var wsuri;
+            if (window.location.protocol === "file:") {
+                wsuri = "ws://127.0.0.1:8080/ws";
+            } else {
+                wsuri = "ws://" + window.location.hostname + ":8080/ws";
+            }
+            if ("WebSocket" in window) {
+                connection = new WebSocket(wsuri);
+            } else if ("MozWebSocket" in window) {
+                connection = new MozWebSocket(wsuri);
+            } else {
+                console.log("Browser does not support WebSocket!");
+            }
+            if (connection) {
+                connection.onopen = function() {
+                    console.log('Connection established');
+                    connection.send(jsend(true, 'sync'));
+                };
+                connection.onclose = function(e) {
+                    console.log('Connection lost');
+                    connection = null;
+                };
+                connection.onmessage = function(e) {
+                    //terminal.print("Server: " + e.data);
+                    var json = JSON.parse(e.data);
+                    //If there's a message, print it
+                    if (json.location){
+                        console.log('Received new location');
+                        var new_location = json.location;
+                        player.location = new google.maps.LatLng(new_location.lat, new_location.long);
+                        update_reticle();
+                    } else if (json.map){
+                        console.log('Received map information');
+                        // Because we could potentially get sent informaiton piecemeal, we have to check for each type:
+                        if (json.map.pokemon){
+                            for (var p in json.map.pokemon){
+                                var new_pokemon = json.map.pokemon[p];
+                                var pokeimage = {url: 'pokemon/' + new_pokemon.pokemon_id + '.png',
+                                                 size: new google.maps.Size(30, 30),
+                                                 origin: new google.maps.Point(0, 0),
+                                                 anchor: new google.maps.Point(15, 15)};
+                                var pokemarker = new google.maps.Marker({
+                                    position: {lat: new_pokemon.latitude, lng: new_pokemon.longitude},
+                                    map: map,
+                                    icon: pokeimage,
+                                    //shape: shape,
+                                    title: pokemon_name_list[parseInt(new_pokemon.pokemon_id)-1],
+                                    zIndex: 3
+                                });
+                                /* Create a thing such that, went the despawn time for a given spawn is up, it deletes the
+                                entrty of the list without causing issues. May have to use an async queue in order to do it.
+                                 */
+                                pokemap.pokemon.push(pokemarker);
+                            }
+                        }
+                        if (json.map.pokestops){
+                            for (var s in json.map.pokestops){
+                                var new_pokestop = json.map.pokestops[s];
+                                var pokestopimage = {url: 'Pstop.png',
+                                    size: new google.maps.Size(20, 20),
+                                    origin: new google.maps.Point(0, 0),
+                                    anchor: new google.maps.Point(10, 10)};
+                                var pokestopmarker = new google.maps.Marker({
+                                    position: {lat: new_pokestop.latitude, lng: new_pokestop.longitude},
+                                    map: map,
+                                    icon: pokestopimage,
+                                    //shape: shape,
+                                    title: 'Pokestop',
+                                    zIndex: 3
+                                });
+                                pokemap.pokestops.push(new_pokestop);
+                            }
+                        }
+                        if (json.map.gyms){
+                            for (var g in json.map.gyms){
+                                var new_gym = json.map.gyms[g];
+                                var gymimage = {url: 'Valor.png',
+                                    size: new google.maps.Size(20, 20),
+                                    origin: new google.maps.Point(0, 0),
+                                    anchor: new google.maps.Point(10, 10)};
+                                var gymmarker = new google.maps.Marker({
+                                    position: {lat: new_gym.latitude, lng: new_gym.longitude},
+                                    map: map,
+                                    icon: gymimage,
+                                    //shape: shape,
+                                    title: 'Team Valor',
+                                    zIndex: 3
+                                });
+                                pokemap.gyms.push(new_gym);
+                            }
+                        }
+                    }
+                    else {
+                        console.log(e.data);
+                    }
+                }
+            }
+        };
+    }
+    //google.maps.event.addDomListener(window, 'load', initMap);
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDcpD9RZNVJJfxf3rwqrETr4ochoHMApGc&callback=initMap"
+        async defer></script>
+</body>
+</html>

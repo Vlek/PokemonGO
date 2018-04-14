@@ -1,0 +1,39 @@
+Client <-> Webclient Communications:
+
+
+Player
+----Inventory
+--------Items
+--------Pokemon
+----Pokedex
+----Location
+----Path
+
+Map
+----Pokemon
+----Pokestops
+----Gyms
+
+
+Webclient -> Sync info:
+	This is necessary because, when the websocket is created, the onconnect event fires too quickly for the client
+	Also, this will be good for when the player moves to a new location and has items that they're going to get rid of.
+	This should cause the client to send a full barrage of information about the bot back to the webclient.
+	{'sync': true}
+
+Client -> Player Info:
+    {'player': player_object}
+
+Client -> Map Update:
+    This should be fired every time the bot receives new information for pokestops, gyms, and/or pokemon.
+	{"map": {'pokestops':[],
+	         'gyms': [],
+			 'pokemon': []}}
+
+Client -> Location Change:
+	{'location': {'latitude': lat, 'longitude': long}}
+
+Client -> Inventory:
+    {'inventory': {'items':[Item_object],
+                   'pokemon':[Pokemon_object]}}
+
